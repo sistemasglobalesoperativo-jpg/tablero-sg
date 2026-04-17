@@ -74,17 +74,17 @@ tbody tr:hover td{background:var(--bgh);}
 #map{width:100%;height:360px;}
 
 /* ━━━ EVIDENCIAS inline ━━━ */
-.ev-upload-btn{display:inline-flex;align-items:center;gap:6px;background:var(--acf);border:0.5px solid rgba(29,158,117,.3);color:var(--ac);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--fn);transition:all .15s;}
+.ev-upload-btn{display:inline-flex;align-items:center;gap:6px;background:var(--acf);border:0.5px solid rgba(29,158,117,.3);color:var(--ac);padding:6px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--fn);transition:all .15s;}
 .ev-upload-btn:hover{background:rgba(29,158,117,.18);}
 .ev-upload-btn input{display:none;}
-.ev-strip{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
-.ev-strip-item{position:relative;border-radius:8px;overflow:hidden;border:0.5px solid var(--br2);}
-.ev-strip-item img{width:100%;height:130px;object-fit:cover;display:block;}
-.ev-strip-bar{position:absolute;bottom:0;left:0;right:0;padding:5px 8px;background:rgba(11,25,41,0.78);display:flex;align-items:center;gap:6px;}
+.ev-strip{display:flex;flex-direction:column;gap:6px;}
+.ev-strip-item{position:relative;border-radius:6px;overflow:hidden;border:0.5px solid var(--br2);}
+.ev-strip-item img{width:100%;height:110px;object-fit:cover;display:block;}
+.ev-strip-bar{position:absolute;bottom:0;left:0;right:0;padding:4px 7px;background:rgba(11,25,41,0.80);display:flex;align-items:center;gap:5px;}
 .ev-strip-cap{font-size:10px;color:#e8f0f8;flex:1;outline:none;background:transparent;border:none;font-family:var(--fn);}
-.ev-strip-cap::placeholder{color:rgba(232,240,248,0.45);}
-.ev-strip-del{width:18px;height:18px;border-radius:50%;background:rgba(226,75,74,.85);border:none;color:#fff;cursor:pointer;font-size:10px;line-height:18px;text-align:center;flex-shrink:0;}
-.ev-empty-strip{font-size:11px;color:var(--t3);padding:8px 0;}
+.ev-strip-cap::placeholder{color:rgba(232,240,248,0.4);}
+.ev-strip-del{width:16px;height:16px;border-radius:50%;background:rgba(226,75,74,.85);border:none;color:#fff;cursor:pointer;font-size:9px;line-height:16px;text-align:center;flex-shrink:0;}
+.ev-empty-strip{font-size:10px;color:var(--t3);padding:6px 0;line-height:1.5;}
 
 /* ━━━ REPORTE ━━━ */
 .rep-wrap{background:var(--bg2);border-top:2px solid var(--ac);border-radius:0;}
@@ -145,8 +145,16 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
 /* ━━━ PRINT ━━━ */
 @media print{
   .topbar,.kpis,.main,.rep-top,.rep-form,.rep-sc,.rep-actions,footer{display:none!important;}
-  .ev-upload-btn,.ev-strip-del,.ev-strip-cap{display:none!important;}
-  .ev-strip-item img{height:100px!important;}
+  .ev-upload-btn{display:none!important;}
+  .ev-strip-del{display:none!important;}
+  .ev-strip-cap{color:#fff!important;}
+  .ev-strip-bar{background:rgba(0,0,0,0.6)!important;}
+  .ev-strip-item img{height:95px!important;}
+  .ev-empty-strip{display:none!important;}
+  #evCount{display:none!important;}
+  .rep-wrap{background:#fff!important;}
+  [style*="grid-template-columns:1fr 260px"]{grid-template-columns:1fr 200px!important;}
+  [style*="background:var(--bg3)"]{background:#f4f8fb!important;}
   .rep-wrap{background:#fff;border:none;}
   .rep-tbl-wrap{padding:0;}
   .rep-summary{background:#f0faf6;border-color:#b8e8d8;margin:0 0 16px;}
@@ -320,16 +328,16 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
   </div><!-- end rep-tbl-wrap -->
 
   <!-- Columna derecha: evidencias fotográficas -->
-  <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
-    <div style="font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;">Evidencias de campaña</div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:8px;background:var(--bg3);">
+    <div style="font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;">Evidencias fotográficas</div>
     <label class="ev-upload-btn">
       <input type="file" id="evFileInput" accept="image/*" multiple>
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v7M4 4.5l2.5-2.5L9 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 10v1a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Subir fotos
+      Subir fotos (máx. 5)
     </label>
-    <div style="font-size:10px;color:var(--t3);" id="evCount">0 / 5 fotos cargadas</div>
+    <div style="font-size:10px;color:var(--t3);" id="evCount"></div>
     <div class="ev-strip" id="evStrip">
-      <div class="ev-empty-strip">Sube fotos para mostrar evidencias al cliente</div>
+      <div class="ev-empty-strip">Las fotos aparecerán aquí y en el PDF del cliente</div>
     </div>
   </div>
 
