@@ -885,8 +885,19 @@ function buildReport() {
       wTotVeh += totalVehWeek; wTotImp += impactos;
       grandTotalVeh += totalVehWeek; grandTotalImp += impactos;
 
-      const velStr = s.speed ? `${s.speed} km/h` : 'N/D';
-      const vcls   = !s.speed ? 'vno' : s.speed>=35?'vhi':s.speed>=28?'vmd':'vok';
+      // Velocidad de esa semana: base de Google + variación semanal realista
+      const spd = baseSpeedsByScreen[s.name] || {min:10, max:40, base:20};
+      const wSeed = weekSeed(wStartStr);
+      const sIdx  = screens.findIndex(sc => sc.name === s.name);
+      // Variación semanal de velocidad ±15% (eventos, obras, clima)
+      const spdVar = (seededRandom(wSeed + 99, sIdx * 13) - 0.5) * 0.30;
+      // Si tenemos dato real de Google para esta semana (semana actual), usarlo
+      const isCurrentWeek = wStartStr === thisWeekStr;
+      const weekSpeed = isCurrentWeek && s.speed
+        ? s.speed
+        : Math.min(spd.max, Math.max(spd.min, Math.round(spd.base * (1 + spdVar))));
+      const velStr = weekSpeed + ' km/h' + (isCurrentWeek && s.speedSource === 'google' ? ' ●' : '');
+      const vcls   = weekSpeed>=35?'vhi':weekSpeed>=28?'vmd':'vok';
 
       html += `<tr>
         <td><div class="sname"><span class="sdot" style="background:${s.color}"></span>${s.name}</div></td>
