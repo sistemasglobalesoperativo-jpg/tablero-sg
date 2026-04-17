@@ -144,6 +144,12 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
 
 /* ━━━ PRINT ━━━ */
 @media print{
+  @page{
+    margin:12mm;
+    size:A4;
+  }
+  /* Oculta encabezado y pie del navegador (URL, fecha, número de página) */
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .topbar,.kpis,.main,.rep-top,.rep-form,.rep-sc,.rep-actions,footer{display:none!important;}
   .ev-upload-btn{display:none!important;}
   .ev-strip-del{display:none!important;}
