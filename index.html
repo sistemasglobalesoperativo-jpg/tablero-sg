@@ -226,7 +226,7 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
   <div class="panel nr">
     <div class="ptitle-row">
       <span class="ptitle" style="margin:0">Rendimiento por pantalla</span>
-      <span style="font-size:10px;color:var(--t3)">● Google en vivo &nbsp; ◎ estimada</span>
+      <span style="font-size:10px;color:var(--t3)" id="speedLegend">◎ estimada</span>
     </div>
     <table>
       <thead><tr>
@@ -597,7 +597,9 @@ async function fetchSpeeds() {
   const googleCount = results.filter(r => r.status === 'fulfilled').length;
   document.getElementById('speedTs').textContent =
     now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) +
-    ` · ${googleCount}/${screens.length} Google · próx. en 2h`;
+    ` · ${googleCount>0 ? googleCount+'/'+screens.length+' Google' : 'estimada'} · próx. en 2h`;
+  const legEl = document.getElementById('speedLegend');
+  if(legEl) legEl.textContent = googleCount > 0 ? '● Google en vivo' : '◎ estimada por hora';
 
   updateAvgSpeed();
   buildScreenTable();
@@ -618,8 +620,10 @@ function updateAvgSpeed() {
 function vc(s){ return !s.speed?'vno':s.speed>=35?'vhi':s.speed>=28?'vmd':'vok'; }
 function vl(s){
   if(!s.speed) return 'N/D';
-  const src = s.speedSource === 'google' ? ' ●' : ' ◎';
-  return `${s.speed} km/h${src}`;
+  return `${s.speed} km/h`;
+}
+function vsrc(s){
+  return s.speedSource === 'google' ? '● Google' : '◎ estimada';
 }
 
 function buildScreenTable() {
@@ -636,7 +640,10 @@ function buildScreenTable() {
         <span style="${isActive?'font-weight:500;color:'+s.color+';':''}">${s.name}</span>
         ${isActive?'<span style="font-size:9px;background:'+s.color+'18;color:'+s.color+';padding:1px 6px;border-radius:10px;margin-left:4px;border:0.5px solid '+s.color+'44;">activa</span>':''}
       </div></td>
-      <td style="text-align:center"><span class="vb ${vc(s)}">${vl(s)}</span></td>
+      <td style="text-align:center">
+        <span class="vb ${vc(s)}">${vl(s)}</span>
+        <div style="font-size:9px;color:var(--t3);margin-top:2px;">${vsrc(s)}</div>
+      </td>
       <td style="text-align:right" class="mo">${s.veh.toLocaleString('es-CO')}</td>
       <td style="text-align:right" class="mo">${s.pers.toLocaleString('es-CO')}</td>`;
     tr.onclick = () => {
