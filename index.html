@@ -226,7 +226,7 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
   <div class="panel nr">
     <div class="ptitle-row">
       <span class="ptitle" style="margin:0">Rendimiento por pantalla</span>
-      <span style="font-size:10px;color:var(--t3)">vel. = Routes API</span>
+      <span style="font-size:10px;color:var(--t3)">● Google en vivo &nbsp; ◎ estimada</span>
     </div>
     <table>
       <thead><tr>
@@ -526,53 +526,78 @@ async function fetchSpeeds() {
   btn.classList.add('spin');
   document.getElementById('speedTs').textContent = 'actualizando...';
 
-  // Paso 1: Velocidades estimadas inteligentes (inmediatas, siempre disponibles)
-  screens.forEach((s, i) => {
-    screens[i].speed = getRealisticSpeed(s.name);
-  });
-  updateAvgSpeed();
-  buildScreenTable();
-  buildReport();
+  // Paso 1: estimación inmediata por hora del día mientras llega Google
+  screens.forEach((s, i) => { screens[i].speed = getRealisticSpeed(s.name); });
+  updateAvgSpeed(); buildScreenTable();
 
-  // Paso 2: Intentar velocidades reales via Google (funciona desde GitHub Pages)
-  await Promise.all(screens.map(async (s, i) => {
-    const destLat = s.lat + 0.0027; // ~300m al norte
-    try {
-      const res = await fetch(
-        `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GKEY}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-FieldMask': 'routes.duration,routes.staticDuration'
-          },
-          body: JSON.stringify({
-            origin:      { location: { latLng: { latitude: s.lat,    longitude: s.lng } } },
-            destination: { location: { latLng: { latitude: destLat,  longitude: s.lng } } },
-            travelMode: 'DRIVE',
-            routingPreference: 'TRAFFIC_AWARE'
-          })
-        }
-      );
-      if(res.ok) {
-        const data = await res.json();
-        if(data.routes?.[0]) {
-          const durSec = parseInt(data.routes[0].duration?.replace('s','') || '0');
-          if(durSec > 0) {
-            const distM = 300;
-            const realSpeed = Math.round((distM / durSec) * 3.6);
-            if(realSpeed > 2 && realSpeed < 120) {
-              screens[i].speed = realSpeed;
-            }
-          }
-        }
+  // Paso 2: velocidad REAL de Google Routes API
+  // Usamos dos puntos separados ~500m para mayor precisión en velocidad
+  // Funciona desde GitHub Pages (no tiene restricción CORS con origins https)
+  const results = await Promise.allSettled(screens.map(async (s, i) => {
+    // Destino: ~500m al norte en la misma longitud
+    const destLat = +(s.lat + 0.0045).toFixed(6);
+    const DIST_M  = 500;
+
+    const res = await fetch(
+      `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GKEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
+        },
+        body: JSON.stringify({
+          origin:      { location: { latLng: { latitude: s.lat,    longitude: s.lng } } },
+          destination: { location: { latLng: { latitude: destLat,  longitude: s.lng } } },
+          travelMode:          'DRIVE',
+          routingPreference:   'TRAFFIC_AWARE_OPTIMAL',
+          departureTime:       new Date().toISOString(),
+        })
       }
-    } catch(e) { /* mantiene la estimación inteligente */ }
+    );
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (!data.routes?.[0]) throw new Error('No route');
+    const route   = data.routes[0];
+
+    // Duración con tráfico real (segundos)
+    const durSec  = parseInt(route.duration?.replace('s','') || '0');
+    // Duración sin tráfico (referencia)
+    const statSec = parseInt(route.staticDuration?.replace('s','') || '0');
+    // Distancia real de la ruta (metros)
+    const distM   = route.distanceMeters || DIST_M;
+
+    if (durSec <= 0 || distM <= 0) throw new Error('Invalid values');
+
+    const speedKmh = Math.round((distM / durSec) * 3.6);
+
+    // Validación de rango realista por pantalla
+    const limits = baseSpeedsByScreen[s.name] || {min:5, max:80};
+    if (speedKmh < 2 || speedKmh > 120) throw new Error(`Speed out of range: ${speedKmh}`);
+
+    screens[i].speed       = speedKmh;
+    screens[i].speedSource = 'google'; // marcamos que es dato real
+    screens[i].congestion  = statSec > 0 ? (durSec / statSec) : 1;
   }));
 
+  // Registrar resultados en consola para debugging
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      console.log(`✅ ${screens[i].name}: ${screens[i].speed} km/h (Google)`);
+    } else {
+      console.warn(`⚠️ ${screens[i].name}: usando estimación — ${r.reason}`);
+      if (!screens[i].speed) screens[i].speed = getRealisticSpeed(screens[i].name);
+      screens[i].speedSource = 'estimated';
+    }
+  });
+
   const now = new Date();
+  const googleCount = results.filter(r => r.status === 'fulfilled').length;
   document.getElementById('speedTs').textContent =
-    now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) + ' · próx. en 2h';
+    now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) +
+    ` · ${googleCount}/${screens.length} Google · próx. en 2h`;
 
   updateAvgSpeed();
   buildScreenTable();
@@ -591,7 +616,11 @@ function updateAvgSpeed() {
 
 /* ── Tabla de pantallas ── */
 function vc(s){ return !s.speed?'vno':s.speed>=35?'vhi':s.speed>=28?'vmd':'vok'; }
-function vl(s){ return s.speed ? `${s.speed} km/h` : 'N/D'; }
+function vl(s){
+  if(!s.speed) return 'N/D';
+  const src = s.speedSource === 'google' ? ' ●' : ' ◎';
+  return `${s.speed} km/h${src}`;
+}
 
 function buildScreenTable() {
   const tb = document.getElementById('scTbl'); tb.innerHTML='';
