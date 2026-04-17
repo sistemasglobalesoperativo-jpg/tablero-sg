@@ -400,52 +400,55 @@ screens.forEach((s,i) => {
   scPills.appendChild(d);
 });
 
-/* ── Routes API — velocidad real ── */
-// Usamos computeRoutes con un trayecto corto (50m al norte) para obtener condiciones de tráfico
+/* ── Distance Matrix API — velocidad real desde navegador sin CORS ── */
 async function fetchSpeeds() {
   const btn = document.getElementById('refBtn');
   btn.classList.add('spin');
   document.getElementById('speedTs').textContent = 'actualizando...';
 
-  const results = await Promise.all(screens.map(async (s, i) => {
-    // Punto destino: 50 metros al norte de la pantalla
-    const destLat = s.lat + 0.00045;
-    try {
-      const res = await fetch(
-        `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GKEY}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.travelAdvisory'
-          },
-          body: JSON.stringify({
-            origin:      { location: { latLng: { latitude: s.lat,    longitude: s.lng } } },
-            destination: { location: { latLng: { latitude: destLat, longitude: s.lng } } },
-            travelMode:  'DRIVE',
-            routingPreference: 'TRAFFIC_AWARE',
-            extraComputations: ['TRAFFIC_ON_POLYLINE']
-          })
+  // Distance Matrix API acepta llamadas directas desde el navegador (JSONP/script tag)
+  // Usamos un punto de destino 300m al norte de cada pantalla para obtener tiempo real de viaje
+  // y calcular velocidad: distancia / tiempo = km/h
+  const DIST_M = 300; // metros de separación entre origen y destino
+  const DEG_PER_M = 1 / 111320; // grados por metro en latitud
+
+  await Promise.all(screens.map((s, i) => new Promise(resolve => {
+    const destLat = s.lat + (DIST_M * DEG_PER_M);
+    const callbackName = `dmCb_${i}_${Date.now()}`;
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/distancematrix/json` +
+      `?origins=${s.lat},${s.lng}` +
+      `&destinations=${destLat},${s.lng}` +
+      `&mode=driving` +
+      `&departure_time=now` +
+      `&traffic_model=best_guess` +
+      `&key=${GKEY}` +
+      `&callback=${callbackName}`;
+
+    window[callbackName] = (data) => {
+      try {
+        const el = data?.rows?.[0]?.elements?.[0];
+        if (el && el.status === 'OK') {
+          const distM    = el.distance?.value || DIST_M;
+          const durSec   = el.duration_in_traffic?.value || el.duration?.value || 1;
+          const speedKmh = Math.round((distM / durSec) * 3.6);
+          screens[i].speed = (speedKmh > 0 && speedKmh < 130) ? speedKmh : null;
+        } else {
+          screens[i].speed = null;
         }
-      );
-      const data = await res.json();
-      if (data.routes && data.routes[0]) {
-        const route = data.routes[0];
-        const durSec     = parseInt(route.duration?.replace('s','') || '0');
-        const staticSec  = parseInt(route.staticDuration?.replace('s','') || '0');
-        // Distancia aprox 50m, calcular velocidad real
-        const distM = 50;
-        const speedMs = durSec > 0 ? distM / durSec : null;
-        const speedKmh = speedMs ? Math.round(speedMs * 3.6) : null;
-        // Índice de congestión: ratio duración real vs sin tráfico
-        const congestion = staticSec > 0 ? durSec / staticSec : 1;
-        screens[i].speed = speedKmh && speedKmh > 0 && speedKmh < 120 ? speedKmh : null;
-        screens[i].congestion = congestion;
-      }
-    } catch(e) {
-      screens[i].speed = null;
-    }
-  }));
+      } catch(e) { screens[i].speed = null; }
+      delete window[callbackName];
+      document.head.removeChild(script);
+      resolve();
+    };
+
+    script.onerror = () => { screens[i].speed = null; resolve(); };
+    document.head.appendChild(script);
+
+    // Timeout de seguridad 8s
+    setTimeout(() => { screens[i].speed = screens[i].speed ?? null; resolve(); }, 8000);
+  })));
 
   const now = new Date();
   document.getElementById('speedTs').textContent =
