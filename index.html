@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero DOOH — Sistemas Globales</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0B1929;--bg2:#111f30;--bg3:#152537;--bgh:#1a2e43;
+  --ac:#1D9E75;--acl:#5DCAA5;--acf:rgba(29,158,117,0.12);
+  --t1:#e8f0f8;--t2:#7a96b0;--t3:#4a6278;
+  --br:rgba(255,255,255,0.07);--br2:rgba(255,255,255,0.12);
+  --fn:'DM Sans',sans-serif;--mo:'DM Mono',monospace;
+}
+html,body{background:var(--bg);color:var(--t1);font-family:var(--fn);font-size:14px;line-height:1.5;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 24px;border-bottom:0.5px solid var(--br);background:rgba(11,25,41,0.97);position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:10px;}
+.logo-bg{width:36px;height:36px;background:var(--ac);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:12px;color:#fff;}
+.logo-name{font-size:13px;font-weight:500;}
+.logo-sub{font-size:10px;color:var(--acl);letter-spacing:.07em;text-transform:uppercase;}
+.top-right{display:flex;align-items:center;gap:12px;}
+.clock-txt{font-size:11px;color:var(--t2);font-family:var(--mo);}
+.speed-status{font-size:10px;color:var(--t3);}
+.speed-status span{color:var(--acl);font-family:var(--mo);}
+.live-pill{display:flex;align-items:center;gap:5px;background:var(--acf);border:0.5px solid rgba(29,158,117,.3);padding:4px 11px;border-radius:20px;font-size:10px;color:var(--acl);letter-spacing:.06em;text-transform:uppercase;}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--ac);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-sm{font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--br2);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--fn);display:inline-flex;align-items:center;gap:5px;transition:all .15s;}
+.btn-sm:hover{border-color:var(--ac);color:var(--acl);}
+.btn-sm.spin svg{animation:rot .7s linear infinite;}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:0.5px solid var(--br);}
+.kpi{padding:18px 20px;border-right:0.5px solid var(--br);}
+.kpi:last-child{border-right:none;}
+.kpi-ic{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;}
+.kpi-lb{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
+.kpi-vl{font-family:var(--mo);font-size:22px;font-weight:500;line-height:1;}
+.kpi-vl em{font-size:12px;color:var(--t2);font-style:normal;margin-left:2px;}
+.kpi-sb{font-size:10px;color:var(--t3);margin-top:4px;}
+
+.main{display:grid;grid-template-columns:1fr 390px;}
+.panel{padding:18px 22px;border-bottom:0.5px solid var(--br);border-right:0.5px solid var(--br);}
+.panel.nr{border-right:none;}.panel.nb{border-bottom:none;}
+.ptitle{font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+.ptitle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+
+.dpills{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
+.dp{font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--br2);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--fn);transition:all .15s;}
+.dp:hover{border-color:var(--ac);color:var(--acl);}
+.dp.on{background:var(--ac);border-color:var(--ac);color:#fff;}
+
+table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+th{text-align:left;padding:6px 8px;font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid var(--br);}
+td{padding:8px 8px;border-bottom:0.5px solid var(--br);color:var(--t1);}
+tbody tr:hover td{background:var(--bgh);}
+.tr-total td{background:rgba(29,158,117,.06);border-top:0.5px solid rgba(29,158,117,.2);color:var(--acl);font-weight:500;}
+.sname{display:flex;align-items:center;gap:6px;}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.vb{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;font-family:var(--mo);}
+.vok{background:rgba(29,158,117,.15);color:#5DCAA5;}
+.vmd{background:rgba(239,159,39,.15);color:#FAC775;}
+.vhi{background:rgba(226,75,74,.15);color:#F09595;}
+.vno{background:rgba(122,150,176,.15);color:#7a96b0;}
+.mo{font-family:var(--mo);}
+
+.leg{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2);}
+.ll{width:12px;height:2px;border-radius:1px;}
+#map{width:100%;height:360px;}
+
+/* ━━━ REPORTE ━━━ */
+.rep-wrap{background:var(--bg2);border-top:2px solid var(--ac);}
+.rep-top{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:0.5px solid var(--br);}
+.rep-title{font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.rep-note{font-size:11px;color:var(--t3);background:rgba(29,158,117,.08);border:0.5px solid rgba(29,158,117,.2);padding:5px 12px;border-radius:20px;}
+.rep-note strong{color:var(--acl);}
+
+.rep-form{display:grid;grid-template-columns:1fr 1fr 180px 180px;gap:14px;padding:18px 24px;border-bottom:0.5px solid var(--br);}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;}
+.fi{background:var(--bg3);border:0.5px solid var(--br2);border-radius:8px;color:var(--t1);font-family:var(--fn);font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s;width:100%;}
+.fi:focus{border-color:var(--ac);}
+.fi[type=date]{cursor:pointer;}
+.fi[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5);cursor:pointer;}
+
+.rep-sc{padding:14px 24px;border-bottom:0.5px solid var(--br);}
+.rep-sc-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;}
+.sc-pills{display:flex;flex-wrap:wrap;gap:8px;}
+.sc-pill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:0.5px solid var(--br2);cursor:pointer;transition:all .15s;font-size:12px;color:var(--t2);user-select:none;}
+.sc-pill:hover{border-color:var(--ac);color:var(--t1);}
+.sc-pill.on{border-color:var(--ac);background:var(--acf);color:var(--t1);}
+
+.rep-tbl-wrap{padding:0 24px 20px;}
+
+/* Tabla reporte */
+.rtbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:0;}
+.rtbl th{padding:8px 10px;font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg3);border-bottom:0.5px solid var(--br);text-align:left;}
+.rtbl th.r{text-align:right;}
+.rtbl td{padding:9px 10px;border-bottom:0.5px solid var(--br);color:var(--t1);}
+.rtbl td.r{text-align:right;}
+.rtbl td.c{text-align:center;}
+.rtbl .tr-wk td{background:var(--bg2);color:var(--t2);font-size:11px;font-weight:500;padding:10px 10px 8px;}
+.rtbl .tr-wk td span{color:var(--t3);font-weight:400;}
+.rtbl .tr-tot td{background:rgba(29,158,117,.07);border-top:0.5px solid rgba(29,158,117,.2);font-weight:500;color:var(--acl);}
+.rtbl tbody tr:not(.tr-wk):not(.tr-tot):hover td{background:var(--bgh);}
+
+.imp-tag{display:inline-flex;align-items:center;background:rgba(29,158,117,.13);color:var(--acl);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--mo);}
+.imp-tag-total{background:rgba(29,158,117,.22);font-size:12px;padding:4px 12px;}
+
+.rep-summary{margin:0 24px 20px;background:rgba(29,158,117,.07);border:0.5px solid rgba(29,158,117,.2);border-radius:10px;padding:16px 20px;display:grid;grid-template-columns:1fr repeat(3,auto);gap:20px;align-items:center;}
+.sum-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
+.sum-val{font-family:var(--mo);font-size:20px;font-weight:500;color:var(--t1);}
+.sum-val.green{color:var(--acl);}
+.sum-desc{font-size:11px;color:var(--t2);}
+
+.rep-actions{padding:14px 24px;display:flex;align-items:center;gap:12px;border-top:0.5px solid var(--br);}
+.btn-pdf{display:inline-flex;align-items:center;gap:7px;background:var(--ac);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:500;font-family:var(--fn);cursor:pointer;transition:background .15s;}
+.btn-pdf:hover{background:#16855f;}
+.pdf-hint{font-size:11px;color:var(--t3);}
+
+footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-items:center;justify-content:space-between;}
+.ft-l{font-size:11px;color:var(--t3);}
+.ft-r{display:flex;gap:18px;}
+.ft-s{font-size:11px;color:var(--t3);}
+.ft-s span{color:var(--t2);font-family:var(--mo);}
+
+/* ━━━ PRINT ━━━ */
+@media print{
+  .topbar,.kpis,.main,.rep-top,.rep-form,.rep-sc,.rep-actions,footer{display:none!important;}
+  .rep-wrap{background:#fff;border:none;}
+  .rep-tbl-wrap{padding:0;}
+  .rep-summary{background:#f0faf6;border-color:#b8e8d8;margin:0 0 16px;}
+  .sum-val{color:#0B1929;}
+  .sum-val.green{color:#0F6E56;}
+  body,html{background:#fff;color:#1a2e3b;}
+  .rtbl th{background:#f4f8fb;color:#4a6278;}
+  .rtbl td{color:#1a2e3b;border-color:#e8eef4;}
+  .rtbl .tr-wk td{background:#f9fbfc;color:#7a96b0;}
+  .rtbl .tr-tot td{background:#e8f8f2;color:#0F6E56;}
+  .imp-tag{background:#e1f5ee;color:#0F6E56;}
+  .imp-tag-total{background:#c8f0e0;color:#0F6E56;}
+  .print-header{display:flex!important;}
+  @page{size:A4 landscape;margin:12mm;}
+}
+.print-header{display:none;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #1D9E75;}
+.print-meta{text-align:right;font-size:11px;color:#7a96b0;line-height:1.8;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo-wrap">
+    <div class="logo-bg">SG</div>
+    <div>
+      <div class="logo-name">Sistemas Globales</div>
+      <div class="logo-sub">Red DOOH · Cartagena</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <div>
+      <div class="clock-txt" id="clk"></div>
+      <div class="speed-status">Velocidades: <span id="speedTs">cargando...</span></div>
+    </div>
+    <button class="btn-sm" id="refBtn" onclick="fetchSpeeds()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 2A5 5 0 1 0 11 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M10.5 2V5H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Actualizar
+    </button>
+    <div class="live-pill"><span class="ldot"></span>En vivo</div>
+  </div>
+</header>
+
+<section class="kpis">
+  <div class="kpi">
+    <div class="kpi-ic" style="background:rgba(29,158,117,.15)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="6" width="14" height="5" rx="2" stroke="#1D9E75" stroke-width="1.3"/><circle cx="4.5" cy="8.5" r="1.5" fill="#1D9E75"/><circle cx="11.5" cy="8.5" r="1.5" fill="#1D9E75"/><path d="M4 6V5a4 4 0 018 0v1" stroke="#1D9E75" stroke-width="1.3"/></svg></div>
+    <div class="kpi-lb">Vehículos / día</div>
+    <div class="kpi-vl">274<em>mil</em></div>
+    <div class="kpi-sb">5 pantallas activas</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic" style="background:rgba(55,138,221,.15)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="7" width="14" height="4" rx="1.5" stroke="#378ADD" stroke-width="1.3"/><circle cx="4" cy="9" r="1.2" fill="#378ADD"/><circle cx="12" cy="9" r="1.2" fill="#378ADD"/><path d="M4 7V6.5a3.5 3.5 0 017 0V7" stroke="#378ADD" stroke-width="1.3"/></svg></div>
+    <div class="kpi-lb">Vehículos / hora</div>
+    <div class="kpi-vl">8.9<em>mil</em></div>
+    <div class="kpi-sb">Promedio red</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic" style="background:rgba(239,159,39,.15)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.5" stroke="#EF9F27" stroke-width="1.3"/><path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="#EF9F27" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+    <div class="kpi-lb">Personas / hora</div>
+    <div class="kpi-vl">29.4<em>mil</em></div>
+    <div class="kpi-sb">Factor 3.3×</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic" style="background:rgba(127,119,221,.15)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 13V8l6-5 6 5v5H10V10H6v3H2z" stroke="#7F77DD" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+    <div class="kpi-lb">Personas / día</div>
+    <div class="kpi-vl">910<em>mil</em></div>
+    <div class="kpi-sb">Exposición potencial</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic" style="background:rgba(212,83,126,.15)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v4l2.5 2.5" stroke="#D4537E" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="8" r="6" stroke="#D4537E" stroke-width="1.3"/></svg></div>
+    <div class="kpi-lb">Vel. promedio red</div>
+    <div class="kpi-vl" id="avgSpd">—<em>km/h</em></div>
+    <div class="kpi-sb">Routes API en vivo</div>
+  </div>
+</section>
+
+<div class="main">
+  <div class="panel">
+    <div class="ptitle">Promedio de vehículos por hora y día</div>
+    <div class="dpills" id="dpills">
+      <button class="dp on" data-d="todos">Todos</button>
+      <button class="dp" data-d="lunes">Lunes</button>
+      <button class="dp" data-d="martes">Martes</button>
+      <button class="dp" data-d="miercoles">Miércoles</button>
+      <button class="dp" data-d="jueves">Jueves</button>
+      <button class="dp" data-d="viernes">Viernes</button>
+      <button class="dp" data-d="sabado">Sábado</button>
+      <button class="dp" data-d="domingo">Domingo</button>
+    </div>
+    <div style="position:relative;height:190px"><canvas id="lineC" role="img" aria-label="Tráfico promedio por hora"></canvas></div>
+    <div class="leg" id="legEl"></div>
+  </div>
+
+  <div class="panel nr">
+    <div class="ptitle-row">
+      <span class="ptitle" style="margin:0">Rendimiento por pantalla</span>
+      <span style="font-size:10px;color:var(--t3)">vel. = Routes API</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40%">Pantalla</th>
+        <th style="width:22%;text-align:center">Vel. real</th>
+        <th style="width:19%;text-align:right">Veh/h</th>
+        <th style="width:19%;text-align:right">Per/h</th>
+      </tr></thead>
+      <tbody id="scTbl"></tbody>
+    </table>
+  </div>
+
+  <div class="panel nb">
+    <div class="ptitle">Exposición — personas por hora por pantalla</div>
+    <div style="position:relative;height:150px"><canvas id="barC" role="img" aria-label="Personas por hora"></canvas></div>
+  </div>
+
+  <div class="panel nr nb" style="padding:0;overflow:hidden">
+    <div style="padding:12px 18px;border-bottom:0.5px solid var(--br)"><div class="ptitle" style="margin:0">Ubicación — Cartagena</div></div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<!-- ━━━ REPORTE ━━━ -->
+<div class="rep-wrap">
+
+  <div class="rep-top">
+    <div class="rep-title">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="1" width="14" height="16" rx="2" stroke="#1D9E75" stroke-width="1.4"/><path d="M5 6h8M5 9h8M5 12h5" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Reporte semanal para cliente
+    </div>
+    <div class="rep-note">Impactos reales estimados = <strong>30%</strong> de vehículos con visibilidad efectiva</div>
+  </div>
+
+  <div class="rep-form">
+    <div class="fg">
+      <label class="fl">Nombre del cliente</label>
+      <input class="fi" type="text" id="rClient" placeholder="Ej: Alkosto Cartagena">
+    </div>
+    <div class="fg">
+      <label class="fl">Campaña / referencia</label>
+      <input class="fi" type="text" id="rCamp" placeholder="Ej: Campaña Verano 2026">
+    </div>
+    <div class="fg">
+      <label class="fl">Fecha inicio</label>
+      <input class="fi" type="date" id="rStart">
+    </div>
+    <div class="fg">
+      <label class="fl">Fecha fin</label>
+      <input class="fi" type="date" id="rEnd">
+    </div>
+  </div>
+
+  <div class="rep-sc">
+    <div class="rep-sc-label">Pantallas del cliente</div>
+    <div class="sc-pills" id="scPills"></div>
+  </div>
+
+  <div class="rep-tbl-wrap">
+    <!-- encabezado solo para impresión -->
+    <div class="print-header" id="printHeader">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;background:#1D9E75;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:500;font-size:13px;">SG</div>
+        <div>
+          <div style="font-size:15px;font-weight:500;color:#0B1929;">Sistemas Globales</div>
+          <div style="font-size:10px;color:#1D9E75;letter-spacing:.07em;text-transform:uppercase;">Red DOOH · Cartagena, Colombia</div>
+        </div>
+      </div>
+      <div class="print-meta" id="printMeta"></div>
+    </div>
+    <div id="rptContainer"></div>
+  </div>
+
+  <div class="rep-actions">
+    <button class="btn-pdf" onclick="printReport()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 10v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Descargar PDF
+    </button>
+    <span class="pdf-hint">Se abrirá el diálogo de impresión → selecciona "Guardar como PDF"</span>
+  </div>
+
+</div>
+
+<footer>
+  <div class="ft-l">Sistemas Globales · Red DOOH Cartagena · Velocidades via Google Routes API · Conteos promedio histórico</div>
+  <div class="ft-r">
+    <div class="ft-s">Pantallas <span>5/5</span></div>
+    <div class="ft-s">Negocios 200m <span>6,494</span></div>
+  </div>
+</footer>
+
+<script>
+const GKEY = 'AIzaSyBHMxMt7oWlz-RItPPj4BCX9y1QNdfL4vI';
+const IMPACT_RATE = 0.30;
+const HOURS_OP    = 18; // 5h a 22h
+
+const screens = [
+  {name:'El Coreano',     lat:10.390944, lng:-75.488944, veh:2835, pers:9413, neg:1203, color:'#1D9E75', speed:null},
+  {name:'Los Ejecutivos', lat:10.399083, lng:-75.493694, veh:1399, pers:4647, neg:1802, color:'#7F77DD', speed:null},
+  {name:'Ronda Real',     lat:10.393944, lng:-75.481250, veh:1371, pers:4552, neg:1466, color:'#D4537E', speed:null},
+  {name:'Turbaco',        lat:10.355056, lng:-75.442389, veh:1243, pers:4127, neg:823,  color:'#D85A30', speed:null},
+  {name:'Crisanto Luque', lat:10.404500, lng:-75.520222, veh:2040, pers:6773, neg:1203, color:'#378ADD', speed:null},
+];
+
+// Tráfico por hora para cada día — diferente por pantalla y día
+// Escala base: veh/hora promedio por pantalla, con variación realista por día
+const dayFactors = {
+  lunes:0.96, martes:0.94, miercoles:0.95, jueves:0.98, viernes:1.04, sabado:0.92, domingo:0.81
+};
+// Promedio de vehículos por hora para cada pantalla (ya tenemos veh/h base en screens[i].veh)
+// Para calcular total diario: veh_hora × factor_dia × horas_operativas
+
+const hours = ['5h','6h','7h','8h','9h','10h','11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h'];
+// Perfil horario normalizado (suma ≈ 18 = HOURS_OP)
+const hourProfile = [0.55,0.65,0.85,1.10,1.05,1.02,0.98,1.04,1.08,1.03,0.99,1.01,1.06,1.12,1.15,1.08,1.01,0.93];
+
+// Generar datos del gráfico de líneas: promedio de toda la red por hora/día
+const dayData = {};
+Object.keys(dayFactors).forEach(day => {
+  const factor = dayFactors[day];
+  dayData[day] = hourProfile.map(h => {
+    const avgNet = screens.reduce((a,s) => a + s.veh * h * factor, 0) / screens.length;
+    return Math.round(avgNet);
+  });
+});
+
+const dayMeta = {
+  lunes:{label:'Lunes',color:'#378ADD'}, martes:{label:'Martes',color:'#D85A30'},
+  miercoles:{label:'Miércoles',color:'#7F77DD'}, jueves:{label:'Jueves',color:'#534AB7'},
+  viernes:{label:'Viernes',color:'#EF9F27'}, sabado:{label:'Sábado',color:'#D4537E'},
+  domingo:{label:'Domingo',color:'#1D9E75'},
+};
+
+/* ── Fechas por defecto: inicio = lunes de esta semana, fin = HOY ── */
+(function(){
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  // Lunes de la semana actual
+  const d = today.getDay();
+  const diff = d === 0 ? -6 : 1 - d;
+  const mon = new Date(today); mon.setDate(today.getDate() + diff);
+  const monStr = mon.toISOString().split('T')[0];
+
+  const startEl = document.getElementById('rStart');
+  const endEl   = document.getElementById('rEnd');
+
+  // Máximo seleccionable = hoy en ambos campos
+  startEl.max = todayStr;
+  endEl.max   = todayStr;
+
+  startEl.value = monStr;
+  endEl.value   = todayStr;
+})();
+
+/* ── Reloj ── */
+function tick(){
+  document.getElementById('clk').textContent =
+    new Date().toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+
+    ' · '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+tick(); setInterval(tick,1000);
+
+/* ── Selectores de pantallas ── */
+const scPills = document.getElementById('scPills');
+screens.forEach((s,i) => {
+  const d = document.createElement('div');
+  d.className = 'sc-pill on'; d.dataset.idx = i;
+  d.innerHTML = `<span class="sdot" style="background:${s.color};width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;"></span>${s.name}`;
+  d.onclick = () => { d.classList.toggle('on'); buildReport(); };
+  scPills.appendChild(d);
+});
+
+/* ── Routes API — velocidad real ── */
+// Usamos computeRoutes con un trayecto corto (50m al norte) para obtener condiciones de tráfico
+async function fetchSpeeds() {
+  const btn = document.getElementById('refBtn');
+  btn.classList.add('spin');
+  document.getElementById('speedTs').textContent = 'actualizando...';
+
+  const results = await Promise.all(screens.map(async (s, i) => {
+    // Punto destino: 50 metros al norte de la pantalla
+    const destLat = s.lat + 0.00045;
+    try {
+      const res = await fetch(
+        `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GKEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.travelAdvisory'
+          },
+          body: JSON.stringify({
+            origin:      { location: { latLng: { latitude: s.lat,    longitude: s.lng } } },
+            destination: { location: { latLng: { latitude: destLat, longitude: s.lng } } },
+            travelMode:  'DRIVE',
+            routingPreference: 'TRAFFIC_AWARE',
+            extraComputations: ['TRAFFIC_ON_POLYLINE']
+          })
+        }
+      );
+      const data = await res.json();
+      if (data.routes && data.routes[0]) {
+        const route = data.routes[0];
+        const durSec     = parseInt(route.duration?.replace('s','') || '0');
+        const staticSec  = parseInt(route.staticDuration?.replace('s','') || '0');
+        // Distancia aprox 50m, calcular velocidad real
+        const distM = 50;
+        const speedMs = durSec > 0 ? distM / durSec : null;
+        const speedKmh = speedMs ? Math.round(speedMs * 3.6) : null;
+        // Índice de congestión: ratio duración real vs sin tráfico
+        const congestion = staticSec > 0 ? durSec / staticSec : 1;
+        screens[i].speed = speedKmh && speedKmh > 0 && speedKmh < 120 ? speedKmh : null;
+        screens[i].congestion = congestion;
+      }
+    } catch(e) {
+      screens[i].speed = null;
+    }
+  }));
+
+  const now = new Date();
+  document.getElementById('speedTs').textContent =
+    now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) + ' · próx. en 2h';
+
+  updateAvgSpeed();
+  buildScreenTable();
+  buildReport();
+  btn.classList.remove('spin');
+  setTimeout(fetchSpeeds, 2 * 60 * 60 * 1000);
+}
+
+function updateAvgSpeed() {
+  const v = screens.filter(s => s.speed !== null).map(s => s.speed);
+  if (v.length) {
+    const avg = Math.round(v.reduce((a,b)=>a+b,0)/v.length);
+    document.getElementById('avgSpd').innerHTML = `${avg}<em>km/h</em>`;
+  }
+}
+
+/* ── Tabla de pantallas ── */
+function vc(s){ return !s.speed?'vno':s.speed>=35?'vhi':s.speed>=28?'vmd':'vok'; }
+function vl(s){ return s.speed ? `${s.speed} km/h` : 'N/D'; }
+
+function buildScreenTable() {
+  const tb = document.getElementById('scTbl'); tb.innerHTML='';
+  screens.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="sname"><span class="sdot" style="background:${s.color}"></span>${s.name}</div></td>
+      <td style="text-align:center"><span class="vb ${vc(s)}">${vl(s)}</span></td>
+      <td style="text-align:right" class="mo">${s.veh.toLocaleString('es-CO')}</td>
+      <td style="text-align:right" class="mo">${s.pers.toLocaleString('es-CO')}</td>`;
+    tb.appendChild(tr);
+  });
+  const tot = document.createElement('tr'); tot.className='tr-total';
+  tot.innerHTML = `
+    <td><div class="sname"><span class="sdot" style="border:1px solid #5DCAA5;background:transparent;"></span>Total red</div></td>
+    <td style="text-align:center">—</td>
+    <td style="text-align:right" class="mo">${screens.reduce((a,s)=>a+s.veh,0).toLocaleString('es-CO')}</td>
+    <td style="text-align:right" class="mo">${screens.reduce((a,s)=>a+s.pers,0).toLocaleString('es-CO')}</td>`;
+  tb.appendChild(tot);
+}
+buildScreenTable();
+
+/* ── Gráficos tablero ── */
+const gc='rgba(255,255,255,0.05)', tc='#4a6278';
+function ds(day) {
+  if(day==='todos') return Object.keys(dayMeta).map(k=>({
+    label:dayMeta[k].label, data:dayData[k], borderColor:dayMeta[k].color,
+    borderWidth:1.5, pointRadius:0, tension:.4, backgroundColor:'transparent'
+  }));
+  return [{label:dayMeta[day].label, data:dayData[day], borderColor:dayMeta[day].color,
+    borderWidth:2, pointRadius:0, tension:.4, backgroundColor:dayMeta[day].color+'18', fill:true}];
+}
+const lc = new Chart(document.getElementById('lineC'),{
+  type:'line', data:{labels:hours,datasets:ds('todos')},
+  options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
+      backgroundColor:'#0B1929',borderColor:'rgba(255,255,255,.1)',borderWidth:.5,
+      titleColor:'#7a96b0',bodyColor:'#e8f0f8',
+      callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toLocaleString('es-CO')}`}}},
+    scales:{
+      x:{ticks:{font:{size:10},color:tc,maxRotation:0},grid:{color:gc},border:{color:'rgba(255,255,255,.08)'}},
+      y:{ticks:{font:{size:10},color:tc,callback:v=>(v/1000).toFixed(1)+'k'},grid:{color:gc},border:{color:'rgba(255,255,255,.08)'}}
+    }}
+});
+function buildLeg(day){
+  const el=document.getElementById('legEl'); el.innerHTML='';
+  (day==='todos'?Object.keys(dayMeta):[day]).forEach(k=>{
+    const e=document.createElement('div'); e.className='li';
+    e.innerHTML=`<span class="ll" style="background:${dayMeta[k].color}"></span>${dayMeta[k].label}`;
+    el.appendChild(e);
+  });
+}
+buildLeg('todos');
+document.getElementById('dpills').addEventListener('click',e=>{
+  const b=e.target.closest('.dp'); if(!b) return;
+  document.querySelectorAll('.dp').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const d=b.dataset.d; lc.data.datasets=ds(d); lc.update('active'); buildLeg(d);
+});
+new Chart(document.getElementById('barC'),{
+  type:'bar', data:{labels:screens.map(s=>s.name),datasets:[{data:screens.map(s=>s.pers),
+    backgroundColor:screens.map(s=>s.color),borderRadius:4,borderSkipped:false}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#0B1929',
+      borderColor:'rgba(255,255,255,.1)',borderWidth:.5,
+      callbacks:{label:c=>` ${c.parsed.y.toLocaleString('es-CO')} pers/h`}}},
+    scales:{
+      x:{ticks:{font:{size:10},color:tc,autoSkip:false,maxRotation:15},grid:{display:false}},
+      y:{ticks:{font:{size:10},color:tc,callback:v=>v.toLocaleString('es-CO')},grid:{color:gc}}
+    }}
+});
+
+/* ── Helpers fecha ── */
+function fmtD(s){ if(!s) return '—'; const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+function dayName(dt){ return ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][dt.getDay()]; }
+
+// Vehículos por día para una pantalla según el día de semana
+function vehForDay(screen, dayStr) {
+  const f = dayFactors[dayStr] || 1;
+  return Math.round(screen.veh * HOURS_OP * f);
+}
+
+function getWeeks(start, end) {
+  // Nunca incluir días futuros — cap al día de hoy
+  const today = new Date(); today.setHours(23,59,59,999);
+  const weeks = [];
+  let cur = new Date(start+'T00:00:00');
+  let last = new Date(end+'T00:00:00');
+  if(last > today) last = today; // corte en hoy
+  if(cur > last) return weeks;
+  while(cur <= last) {
+    const wS = new Date(cur);
+    const wE = new Date(cur); wE.setDate(wE.getDate()+6);
+    if(wE > last) wE.setTime(last.getTime());
+    weeks.push({start:new Date(wS), end:new Date(wE)});
+    cur.setDate(cur.getDate()+7);
+  }
+  return weeks;
+}
+
+/* ── Construir tabla de reporte ── */
+function buildReport() {
+  const cont = document.getElementById('rptContainer');
+  const sel  = [...document.querySelectorAll('#scPills .sc-pill.on')].map(d=>screens[parseInt(d.dataset.idx)]);
+  const dS   = document.getElementById('rStart').value;
+  const dE   = document.getElementById('rEnd').value;
+
+  if(!dS || !dE || !sel.length) {
+    cont.innerHTML = `<p style="color:var(--t3);font-size:12px;padding:16px 0;">Selecciona fechas y al menos una pantalla.</p>`;
+    return;
+  }
+
+  const weeks = getWeeks(dS, dE);
+  let grandTotalVeh = 0, grandTotalImp = 0;
+
+  let html = `<table class="rtbl">
+    <thead><tr>
+      <th style="width:22%">Pantalla</th>
+      <th style="width:13%;text-align:center">Vel. prom.</th>
+      <th class="r" style="width:13%">Veh/hora</th>
+      <th class="r" style="width:15%">Veh/día prom.</th>
+      <th class="r" style="width:16%">Total veh. semana</th>
+      <th class="r" style="width:21%">Impactos reales (30%)</th>
+    </tr></thead><tbody>`;
+
+  weeks.forEach((wk, wi) => {
+    // Calcular días reales de esta semana
+    const days = [];
+    let d = new Date(wk.start);
+    while(d <= wk.end) { days.push(new Date(d)); d.setDate(d.getDate()+1); }
+
+    const wLabel = `Semana ${wi+1} — ${fmtD(wk.start.toISOString().split('T')[0])} al ${fmtD(wk.end.toISOString().split('T')[0])}`;
+    const nDays = days.length;
+    html += `<tr class="tr-wk"><td colspan="6">${wLabel} <span>(${nDays} día${nDays>1?'s':''})</span></td></tr>`;
+
+    let wTotVeh = 0, wTotImp = 0;
+
+    sel.forEach(s => {
+      // Suma vehículos reales día por día según perfil del día de semana
+      const totalVehWeek = days.reduce((acc, day) => acc + vehForDay(s, dayName(day)), 0);
+      const avgVehDay    = Math.round(totalVehWeek / nDays);
+      const impactos     = Math.round(totalVehWeek * IMPACT_RATE);
+      wTotVeh += totalVehWeek; wTotImp += impactos;
+      grandTotalVeh += totalVehWeek; grandTotalImp += impactos;
+
+      const velStr = s.speed ? `${s.speed} km/h` : 'N/D';
+      const vcls   = !s.speed ? 'vno' : s.speed>=35?'vhi':s.speed>=28?'vmd':'vok';
+
+      html += `<tr>
+        <td><div class="sname"><span class="sdot" style="background:${s.color}"></span>${s.name}</div></td>
+        <td class="c"><span class="vb ${vcls}">${velStr}</span></td>
+        <td class="r mo">${s.veh.toLocaleString('es-CO')}</td>
+        <td class="r mo">${avgVehDay.toLocaleString('es-CO')}</td>
+        <td class="r mo">${totalVehWeek.toLocaleString('es-CO')}</td>
+        <td class="r"><span class="imp-tag">${impactos.toLocaleString('es-CO')}</span></td>
+      </tr>`;
+    });
+
+    html += `<tr class="tr-tot">
+      <td colspan="2"><strong>Total semana ${wi+1}</strong></td>
+      <td class="r" colspan="2"></td>
+      <td class="r mo">${wTotVeh.toLocaleString('es-CO')}</td>
+      <td class="r"><span class="imp-tag imp-tag-total">&#9733; ${wTotImp.toLocaleString('es-CO')}</span></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  cont.innerHTML = html;
+
+  // Resumen global
+  const totalDays = Math.round((new Date(dE)-new Date(dS))/(1000*60*60*24))+1;
+  const repSumDiv = document.getElementById('repSummary');
+  const existingSum = document.querySelector('.rep-summary');
+  const summaryHtml = `
+    <div class="rep-summary">
+      <div>
+        <div class="sum-label">Período</div>
+        <div style="font-size:13px;color:var(--t1);font-weight:500;">${fmtD(dS)} — ${fmtD(dE)}</div>
+        <div class="sum-desc">${totalDays} días · ${sel.length} pantalla${sel.length>1?'s':''}</div>
+      </div>
+      <div>
+        <div class="sum-label">Total vehículos</div>
+        <div class="sum-val">${grandTotalVeh.toLocaleString('es-CO')}</div>
+        <div class="sum-desc">Pasaron por las pantallas</div>
+      </div>
+      <div>
+        <div class="sum-label">Impactos reales est.</div>
+        <div class="sum-val green">${grandTotalImp.toLocaleString('es-CO')}</div>
+        <div class="sum-desc">Al 30% de visibilidad</div>
+      </div>
+      <div>
+        <div class="sum-label">Impactos / día prom.</div>
+        <div class="sum-val">${Math.round(grandTotalImp/totalDays).toLocaleString('es-CO')}</div>
+        <div class="sum-desc">Promedio diario período</div>
+      </div>
+    </div>`;
+
+  if(existingSum) existingSum.outerHTML = summaryHtml;
+  else cont.insertAdjacentHTML('afterend', summaryHtml);
+
+  // Meta para print
+  const cn = document.getElementById('rClient').value || 'Cliente';
+  const cp = document.getElementById('rCamp').value || 'Reporte de audiencia';
+  document.getElementById('printMeta').innerHTML =
+    `Cliente: <strong style="color:#1a2e3b">${cn}</strong> · Campaña: <strong style="color:#1a2e3b">${cp}</strong><br>
+     Período: ${fmtD(dS)} — ${fmtD(dE)} · Generado: ${new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})}`;
+}
+
+['rClient','rCamp','rStart','rEnd'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    // Re-enforce max=today on every change
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('rStart').max = todayStr;
+    document.getElementById('rEnd').max   = todayStr;
+    // End can't be before start
+    const s = document.getElementById('rStart').value;
+    const eEl = document.getElementById('rEnd');
+    if(s && eEl.value < s) eEl.value = s;
+    buildReport();
+  });
+  document.getElementById(id).addEventListener('change', () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('rStart').max = todayStr;
+    document.getElementById('rEnd').max   = todayStr;
+    const s = document.getElementById('rStart').value;
+    const eEl = document.getElementById('rEnd');
+    if(s && eEl.value < s) eEl.value = s;
+    buildReport();
+  });
+});
+buildReport();
+
+/* ── Print / PDF ── */
+function printReport() {
+  const cn = document.getElementById('rClient').value.trim() || 'reporte';
+  const ds = document.getElementById('rStart').value;
+  const de = document.getElementById('rEnd').value;
+  document.title = `Reporte DOOH — ${cn} — ${ds} al ${de}`;
+  window.print();
+  setTimeout(() => document.title = 'Tablero DOOH — Sistemas Globales', 3000);
+}
+
+/* ── Google Maps ── */
+function initMap() {
+  const map = new google.maps.Map(document.getElementById('map'), {
+    center:{lat:10.385,lng:-75.490}, zoom:12,
+    styles:[
+      {elementType:'geometry',stylers:[{color:'#0d1f30'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#5a7a92'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#0d1f30'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#1a3148'}]},
+      {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#1D9E75'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#071520'}]},
+      {featureType:'poi',stylers:[{visibility:'off'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]},
+    ],
+    disableDefaultUI:false, zoomControl:true, streetViewControl:false, mapTypeControl:false,
+  });
+  new google.maps.TrafficLayer().setMap(map);
+  screens.forEach(s => {
+    const mk = new google.maps.Marker({
+      position:{lat:s.lat,lng:s.lng}, map, title:s.name,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:s.color,fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
+    });
+    const iw = new google.maps.InfoWindow({content:`
+      <div style="background:#111f30;color:#e8f0f8;padding:10px 13px;border-radius:8px;font-family:'DM Sans',sans-serif;min-width:170px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>
+          <strong style="font-size:12px;">${s.name}</strong>
+        </div>
+        <div style="font-size:11px;color:#7a96b0;line-height:1.9;">
+          Vehículos/hora: <span style="color:#e8f0f8;font-family:'DM Mono',monospace">${s.veh.toLocaleString('es-CO')}</span><br>
+          Personas/hora: <span style="color:#e8f0f8;font-family:'DM Mono',monospace">${s.pers.toLocaleString('es-CO')}</span><br>
+          Impactos/hora (30%): <span style="color:#5DCAA5;font-family:'DM Mono',monospace">${Math.round(s.veh*0.3).toLocaleString('es-CO')}</span><br>
+          Negocios 200m: <span style="color:#e8f0f8;font-family:'DM Mono',monospace">${s.neg.toLocaleString('es-CO')}</span>
+        </div>
+      </div>`
+    });
+    mk.addListener('click', () => iw.open(map, mk));
+  });
+}
+window.initMap = initMap;
+fetchSpeeds();
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBHMxMt7oWlz-RItPPj4BCX9y1QNdfL4vI&callback=initMap"></script>
+</body>
+</html>
