@@ -761,12 +761,34 @@ new Chart(document.getElementById('barC'),{
 function fmtD(s){ if(!s) return '—'; const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
 function dayName(dt){ return ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][dt.getDay()]; }
 
-// Vehículos por día para una pantalla según el día de semana Y la semana específica
+// Vehículos totales en un día para una pantalla (base + variación semanal)
 function vehForDay(screen, dayStr, weekStartDate) {
   const wStart = weekStartDate || thisWeekStr;
-  // Suma de vehículos hora por hora usando el perfil de esa semana específica
-  const profile = getWeekHourProfile(wStart, screen.name, dayStr);
-  return profile.reduce((a, b) => a + b, 0);
+  const dayF = dayFactors[dayStr]?.f || 1.0;
+  const seed = weekSeed(wStart);
+  const screenIdx = screens.findIndex(s => s.name === screen.name);
+  const dayIdx = Object.keys(dayFactors).indexOf(dayStr);
+  // Variación semanal ±12%
+  const variation = (seededRandom(seed, screenIdx * 7 + dayIdx) - 0.5) * 0.24;
+  const weekFactor = dayF * (1 + variation);
+  return Math.round(screen.veh * HOURS_OP * weekFactor);
+}
+
+// Vehículos por hora promedio para una pantalla en una semana dada
+function vehPerHourForWeek(screen, days, weekStartDate) {
+  const wStart = weekStartDate || thisWeekStr;
+  const seed = weekSeed(wStart);
+  const screenIdx = screens.findIndex(s => s.name === screen.name);
+  // Promedio de veh/hora de todos los días de la semana
+  let total = 0;
+  days.forEach(day => {
+    const dayStr = dayName(day);
+    const dayIdx = Object.keys(dayFactors).indexOf(dayStr);
+    const dayF = dayFactors[dayStr]?.f || 1.0;
+    const variation = (seededRandom(seed, screenIdx * 7 + dayIdx) - 0.5) * 0.24;
+    total += screen.veh * dayF * (1 + variation);
+  });
+  return Math.round(total / days.length);
 }
 
 function getWeeks(start, end) {
@@ -829,9 +851,7 @@ function buildReport() {
       const wStartStr = wk.start.toISOString().split('T')[0];
       const totalVehWeek = days.reduce((acc, day) => acc + vehForDay(s, dayName(day), wStartStr), 0);
       const avgVehDay    = Math.round(totalVehWeek / nDays);
-      // Calcular veh/hora promedio real de la semana (promedio de todos los perfiles de los días)
-      const allHourVals  = days.flatMap(day => getWeekHourProfile(wStartStr, s.name, dayName(day)));
-      const avgVehHora   = Math.round(allHourVals.reduce((a,b)=>a+b,0) / allHourVals.length);
+      const avgVehHora   = vehPerHourForWeek(s, days, wStartStr);
       const impactos     = Math.round(totalVehWeek * IMPACT_RATE);
       wTotVeh += totalVehWeek; wTotImp += impactos;
       grandTotalVeh += totalVehWeek; grandTotalImp += impactos;
