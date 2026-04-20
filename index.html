@@ -915,6 +915,33 @@ function buildReport() {
   const dS   = document.getElementById('rStart').value;
   const dE   = document.getElementById('rEnd').value;
 
+  // ── Párrafo introductorio — actualiza siempre independiente de validaciones ──
+  (function(){
+    const _cn = document.getElementById('rClient')?.value?.trim() || '';
+    const _cp = document.getElementById('rCamp')?.value?.trim() || '';
+    const _dS = document.getElementById('rStart')?.value || '';
+    const _dE = document.getElementById('rEnd')?.value || '';
+    const titleEl = document.getElementById('repIntroTitle');
+    const paraEl  = document.getElementById('repIntroPara');
+    if(titleEl) titleEl.textContent = 'Short Report — Sistemas Globales';
+    if(paraEl) {
+      if(!_cn && !_cp) {
+        paraEl.textContent = 'Completa el nombre del cliente, campaña y fechas para generar el reporte.';
+      } else {
+        const clientStr = _cn ? `<strong>${_cn}</strong>` : 'el cliente';
+        const campStr   = _cp ? `<strong>"${_cp}"</strong>` : 'la campaña';
+        const fS = _dS ? fmtD(_dS) : '—';
+        const fE = _dE ? fmtD(_dE) : '—';
+        paraEl.innerHTML =
+          `Durante el período comprendido entre el <strong>${fS}</strong> y el <strong>${fE}</strong>, ` +
+          `se ejecutó la campaña ${campStr} para ${clientStr} en la red de pantallas digitales DOOH de Sistemas Globales, ` +
+          `ubicadas en puntos estratégicos de alto tráfico en la ciudad de Cartagena de Indias.<br><br>` +
+          `A continuación se presenta el resumen de audiencia e impactos estimados para el período indicado, ` +
+          `calculados con base en aforos vehiculares oficiales y velocidades en tiempo real provistas por Google Maps Platform.`;
+      }
+    }
+  })();
+
   if(!dS || !dE || !sel.length) {
     cont.innerHTML = `<p style="color:var(--t3);font-size:12px;padding:16px 0;">Selecciona fechas y al menos una pantalla.</p>`;
     return;
@@ -1028,28 +1055,7 @@ function buildReport() {
     `Cliente: <strong style="color:#1a2e3b">${cn}</strong> · Campaña: <strong style="color:#1a2e3b">${cp}</strong><br>
      Período: ${fmtD(dS)} — ${fmtD(dE)} · Generado: ${new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})}`;
 
-  // Párrafo introductorio dinámico
-  const titleEl  = document.getElementById('repIntroTitle');
-  const paraEl   = document.getElementById('repIntroPara');
-  const hasClient = cn && cn !== 'Cliente';
-  const hasCamp   = cp && cp !== 'Reporte de audiencia';
 
-  if(titleEl) titleEl.textContent = 'Short Report — Sistemas Globales';
-
-  if(paraEl) {
-    if(!hasClient && !hasCamp) {
-      paraEl.textContent = 'Completa el nombre del cliente, campaña y fechas para generar el reporte.';
-    } else {
-      const clientStr = hasClient ? `<strong>${cn}</strong>` : 'el cliente';
-      const campStr   = hasCamp   ? `<strong>"${cp}"</strong>` : 'la campaña';
-      paraEl.innerHTML =
-        `Durante el período comprendido entre el <strong>${fmtD(dS)}</strong> y el <strong>${fmtD(dE)}</strong>, ` +
-        `se ejecutó la campaña ${campStr} para ${clientStr} en la red de pantallas digitales DOOH de Sistemas Globales, ` +
-        `ubicadas en puntos estratégicos de alto tráfico en la ciudad de Cartagena de Indias.<br><br>` +
-        `A continuación se presenta el resumen de audiencia e impactos estimados para el período indicado, ` +
-        `calculados con base en aforos vehiculares oficiales y velocidades en tiempo real provistas por Google Maps Platform.`;
-    }
-  }
 }
 
 ['rClient','rCamp','rStart','rEnd'].forEach(id => {
