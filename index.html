@@ -193,7 +193,7 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
     <div style="font-size:13px;color:#7a96b0;margin-bottom:28px;">Sistemas Globales — Red DOOH Cartagena</div>
     <div style="text-align:left;margin-bottom:14px;">
       <label style="font-size:10px;font-weight:500;color:#7a96b0;letter-spacing:.07em;text-transform:uppercase;display:block;margin-bottom:6px;">Usuario</label>
-      <input id="loginUser" type="text" placeholder="Usuario" autocomplete="username"
+      <input id="loginUser" type="text" placeholder="admin" autocomplete="username"
         style="width:100%;border:none;border-bottom:1.5px solid #e0e8f0;padding:8px 0;font-size:14px;color:#0B1929;outline:none;font-family:'DM Sans',sans-serif;background:transparent;">
     </div>
     <div style="text-align:left;margin-bottom:28px;">
@@ -214,7 +214,7 @@ function doLogin() {
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value;
   const err = document.getElementById('loginError');
-  if(u === 'administrador' && p === 'SG2026$$') {
+  if(u === 'admin' && p === 'SG2026$$') {
     document.getElementById('loginScreen').style.display = 'none';
     err.textContent = '';
   } else {
