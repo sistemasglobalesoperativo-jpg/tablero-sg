@@ -159,6 +159,9 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
   .ev-empty-strip{display:none!important;}
   #evCount{display:none!important;}
   .rep-wrap{background:#fff!important;}
+  #repIntro{background:#f4f8fb!important;border-radius:8px;margin-bottom:12px;}
+  #repIntroTitle{color:#0B1929!important;}
+  #repIntroPara{color:#4a6278!important;}
   [style*="grid-template-columns:1fr 260px"]{grid-template-columns:1fr 200px!important;}
   [style*="background:var(--bg3)"]{background:#f4f8fb!important;}
   .rep-wrap{background:#fff;border:none;}
@@ -312,6 +315,12 @@ footer{border-top:0.5px solid var(--br);padding:11px 24px;display:flex;align-ite
   <div class="rep-sc">
     <div class="rep-sc-label">Pantallas del cliente</div>
     <div class="sc-pills" id="scPills"></div>
+  </div>
+
+  <!-- Introducción del reporte -->
+  <div id="repIntro" style="padding:20px 24px;border-top:0.5px solid var(--br);border-bottom:0.5px solid var(--br);background:var(--bg3);">
+    <div style="font-size:18px;font-weight:500;color:var(--t1);margin-bottom:10px;" id="repIntroTitle">Short Report — Sistemas Globales</div>
+    <p style="font-size:13px;color:var(--t2);line-height:1.8;" id="repIntroPara">Completa el nombre del cliente, campaña y fechas para generar el reporte.</p>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 260px;gap:0;border-top:0.5px solid var(--br);">
@@ -1018,6 +1027,29 @@ function buildReport() {
   document.getElementById('printMeta').innerHTML =
     `Cliente: <strong style="color:#1a2e3b">${cn}</strong> · Campaña: <strong style="color:#1a2e3b">${cp}</strong><br>
      Período: ${fmtD(dS)} — ${fmtD(dE)} · Generado: ${new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})}`;
+
+  // Párrafo introductorio dinámico
+  const titleEl  = document.getElementById('repIntroTitle');
+  const paraEl   = document.getElementById('repIntroPara');
+  const hasClient = cn && cn !== 'Cliente';
+  const hasCamp   = cp && cp !== 'Reporte de audiencia';
+
+  if(titleEl) titleEl.textContent = 'Short Report — Sistemas Globales';
+
+  if(paraEl) {
+    if(!hasClient && !hasCamp) {
+      paraEl.textContent = 'Completa el nombre del cliente, campaña y fechas para generar el reporte.';
+    } else {
+      const clientStr = hasClient ? `<strong>${cn}</strong>` : 'el cliente';
+      const campStr   = hasCamp   ? `<strong>"${cp}"</strong>` : 'la campaña';
+      paraEl.innerHTML =
+        `Durante el período comprendido entre el <strong>${fmtD(dS)}</strong> y el <strong>${fmtD(dE)}</strong>, ` +
+        `se ejecutó la campaña ${campStr} para ${clientStr} en la red de pantallas digitales DOOH de Sistemas Globales, ` +
+        `ubicadas en puntos estratégicos de alto tráfico en la ciudad de Cartagena de Indias.<br><br>` +
+        `A continuación se presenta el resumen de audiencia e impactos estimados para el período indicado, ` +
+        `calculados con base en aforos vehiculares oficiales y velocidades en tiempo real provistas por Google Maps Platform.`;
+    }
+  }
 }
 
 ['rClient','rCamp','rStart','rEnd'].forEach(id => {
